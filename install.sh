@@ -84,15 +84,23 @@ trap - EXIT
 
 # Create launchers
 success "Installing system launcher"
-ln -sfn -- "$PREFIX/run.sh" "$LAUNCHER"
+cat > "$LAUNCHER" << 'WRAPPER'
+#!/usr/bin/env bash
+exec /opt/devil/run.sh "$@"
+WRAPPER
+chmod 0755 "$LAUNCHER"
 
 # Install Devil_Recovery smart launcher
 if [[ -f "$PREFIX/Devil_Recovery" ]]; then
   install -m755 -- "$PREFIX/Devil_Recovery" "$LAUNCHER_ALT"
   success "Installing Devil_Recovery command"
 else
-  ln -sfn -- "$PREFIX/run.sh" "$LAUNCHER_ALT"
-  success "Installing Devil_Recovery command (symlink)"
+  cat > "$LAUNCHER_ALT" << 'WRAPPER'
+#!/usr/bin/env bash
+exec /opt/devil/run.sh "$@"
+WRAPPER
+  chmod 0755 "$LAUNCHER_ALT"
+  success "Installing Devil_Recovery command"
 fi
 
 # Install desktop resources
