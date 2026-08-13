@@ -19,6 +19,32 @@ DEVIL is designed as a professional desktop application running entirely within 
 
 ## Quick Start
 
+### ⚡ One-Line Install (from any terminal)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Loverof-Darkness/Linux_Recovery/main/quick-install.sh | sudo bash
+```
+
+After install, just type `Devil_Recovery` or `devil` from **any terminal** — it works system-wide.
+
+### Devil_Recovery Command
+
+```bash
+# Launch DEVIL (auto-installs if not present)
+Devil_Recovery
+
+# Force update to latest version from GitHub
+Devil_Recovery --update
+
+# Uninstall cleanly
+Devil_Recovery --uninstall
+
+# All devil flags work too
+Devil_Recovery --diagnose
+Devil_Recovery --report
+Devil_Recovery --test
+```
+
 ### Run from Source
 
 ```bash
@@ -38,7 +64,7 @@ bash run.sh --test
 bash run.sh --help
 ```
 
-### Install Globally
+### Install Globally (manual)
 
 ```bash
 # Review the source
@@ -49,6 +75,7 @@ sudo bash install.sh
 
 # Run from anywhere
 devil
+Devil_Recovery
 devil --diagnose
 devil --report
 ```

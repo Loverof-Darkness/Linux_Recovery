@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Devil_Recovery — Smart Launcher
+#  Auto-downloads, installs, and launches DEVIL from anywhere.
+#
+#  Usage:
+#    Devil_Recovery              # Launch DEVIL (auto-install if needed)
+#    Devil_Recovery --update     # Force re-download & reinstall latest
+#    Devil_Recovery --uninstall  # Clean removal
+#    Devil_Recovery [any flags]  # Passed through to devil
+#
+#  GitHub: https://github.com/Loverof-Darkness/Linux_Recovery
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+set -Eeuo pipefail
+IFS=$' \t\n'
+
+readonly REPO_URL="https://github.com/Loverof-Darkness/Linux_Recovery.git"
+readonly INSTALL_PREFIX="/opt/devil"
+readonly DEVIL_BIN="$INSTALL_PREFIX/run.sh"
+readonly CLONE_DIR="/tmp/devil-recovery-install"
+
+# ── Colors ──────────────────────────────────────────────────────
+if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
+    C_RED=$'\e[31m'    C_GREEN=$'\e[32m'  C_YELLOW=$'\e[33m'
+    C_CYAN=$'\e[36m'   C_BOLD=$'\e[1m'    C_DIM=$'\e[2m'
+    C_RESET=$'\e[0m'
+else
+    C_RED='' C_GREEN='' C_YELLOW='' C_CYAN='' C_BOLD='' C_DIM='' C_RESET=''
+fi
+
+# ── Helpers ─────────────────────────────────────────────────────
+fail()    { printf '%s✗ ERROR:%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
+success() { printf '%s✓%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+info()    { printf '%s●%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+warn()    { printf '%s⚠ WARNING:%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+
+banner() {
+    printf '%s' "$C_BOLD$C_RED"
+    cat << 'EOF'
+
+    ██████╗ ███████╗██╗   ██╗██╗██╗
+    ██╔══██╗██╔════╝██║   ██║██║██║
+    ██║  ██║█████╗  ██║   ██║██║██║
+    ██║  ██║██╔══╝  ╚██╗ ██╔╝██║██║
+    ██████╔╝███████╗ ╚████╔╝ ██║███████╗
+    ╚═════╝ ╚══════╝  ╚═══╝  ╚═╝╚══════╝
+       Emergency Verification & Intelligent Linux Recovery
+
+EOF
+    printf '%s' "$C_RESET"
+}
+
+# ── Dependency checks ──────────────────────────────────────────
+check_deps() {
+    local missing=()
+
+    if ! command -v git &>/dev/null; then
+        missing+=("git")
+    fi
+
+    if [[ ${BASH_VERSINFO[0]} -lt 5 ]]; then
+        fail "Bash 5 or newer is required (current: ${BASH_VERSION})"
+    fi
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        fail "Missing required dependencies: ${missing[*]}\nInstall them with your package manager and try again."
+    fi
+}
+
+# ── Check if DEVIL is installed ────────────────────────────────
+is_installed() {
+    [[ -d "$INSTALL_PREFIX" ]] && [[ -f "$DEVIL_BIN" ]]
+}
+
+# ── Download from GitHub ───────────────────────────────────────
+download_devil() {
+    info "Downloading DEVIL from GitHub..."
+    rm -rf "$CLONE_DIR" 2>/dev/null || true
+
+    if ! git clone --depth 1 "$REPO_URL" "$CLONE_DIR" 2>&1; then
+        fail "Failed to clone repository. Check your internet connection."
+    fi
+    success "Download complete"
+}
+
+# ── Install DEVIL ──────────────────────────────────────────────
+install_devil() {
+    if [[ ${EUID:-999} -ne 0 ]]; then
+        warn "Installation requires root privileges."
+        info "Re-running with sudo..."
+        exec sudo bash "$0" "--install-from-clone" "$@"
+    fi
+
+    _do_install "$@"
+}
+
+_do_install() {
+    local clone_src="$CLONE_DIR"
+    [[ -d "$clone_src" ]] || fail "Clone directory not found at $clone_src"
+    [[ -f "$clone_src/install.sh" ]] || fail "install.sh not found in downloaded files"
+
+    info "Installing DEVIL to $INSTALL_PREFIX..."
+
+    # Run install.sh with --yes for non-interactive install
+    bash "$clone_src/install.sh" --yes
+
+    # Ensure Devil_Recovery command exists alongside devil
+    if [[ ! -L /usr/local/bin/Devil_Recovery ]]; then
+        ln -sfn "$INSTALL_PREFIX/run.sh" /usr/local/bin/Devil_Recovery
+        success "Created command: Devil_Recovery"
+    fi
+
+    # Cleanup clone directory
+    rm -rf "$CLONE_DIR" 2>/dev/null || true
+    success "Installation complete!"
+}
+
+# ── Update DEVIL ───────────────────────────────────────────────
+update_devil() {
+    banner
+    info "Updating DEVIL to the latest version..."
+    check_deps
+    download_devil
+    install_devil "$@"
+    printf '\n'
+    success "DEVIL has been updated to the latest version!"
+    printf '\n'
+}
+
+# ── Uninstall DEVIL ────────────────────────────────────────────
+uninstall_devil() {
+    if [[ ${EUID:-999} -ne 0 ]]; then
+        warn "Uninstallation requires root privileges."
+        exec sudo bash "$0" "--uninstall"
+    fi
+
+    if ! is_installed; then
+        info "DEVIL is not installed."
+        exit 0
+    fi
+
+    if [[ -f "$INSTALL_PREFIX/uninstall.sh" ]]; then
+        bash "$INSTALL_PREFIX/uninstall.sh"
+    else
+        warn "Uninstall script not found, removing manually..."
+        rm -rf "$INSTALL_PREFIX"
+        rm -f /usr/local/bin/devil
+        rm -f /usr/local/bin/Devil_Recovery
+        success "DEVIL removed"
+    fi
+}
+
+# ── Launch DEVIL ───────────────────────────────────────────────
+launch_devil() {
+    if [[ -x "$DEVIL_BIN" ]]; then
+        exec "$DEVIL_BIN" "$@"
+    elif [[ -f "$DEVIL_BIN" ]]; then
+        exec bash "$DEVIL_BIN" "$@"
+    else
+        fail "DEVIL binary not found at $DEVIL_BIN"
+    fi
+}
+
+# ── Main ───────────────────────────────────────────────────────
+main() {
+    case "${1:-}" in
+        --update)
+            shift
+            update_devil "$@"
+            launch_devil "$@"
+            ;;
+        --uninstall)
+            uninstall_devil
+            ;;
+        --install-from-clone)
+            # Internal flag: called by sudo re-exec during auto-install
+            shift
+            _do_install "$@"
+            # After install, re-launch as original user
+            exit 0
+            ;;
+        *)
+            if is_installed; then
+                # Already installed — just launch
+                launch_devil "$@"
+            else
+                # Not installed — auto-download, install, then launch
+                banner
+                info "DEVIL is not installed. Starting automatic setup..."
+                printf '\n'
+                check_deps
+                download_devil
+                install_devil "$@"
+                printf '\n'
+                success "Setup complete! Launching DEVIL..."
+                printf '\n'
+
+                # Re-exec to pick up the installed version
+                if [[ -x /usr/local/bin/Devil_Recovery ]]; then
+                    exec /usr/local/bin/Devil_Recovery "$@"
+                else
+                    launch_devil "$@"
+                fi
+            fi
+            ;;
+    esac
+}
+
+main "$@"

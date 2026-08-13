@@ -10,7 +10,16 @@ readonly PREFIX=/opt/devil
 readonly DESKTOP_FILE=/usr/share/applications/devil.desktop
 readonly ICON_FILE=/usr/share/pixmaps/devil.png
 readonly LAUNCHER=/usr/local/bin/devil
+readonly LAUNCHER_ALT=/usr/local/bin/Devil_Recovery
 readonly MAN_FILE=/usr/share/man/man1/devil.1.gz
+
+# Parse flags
+NON_INTERACTIVE=false
+for arg in "$@"; do
+  case "$arg" in
+    --yes|--non-interactive|-y) NON_INTERACTIVE=true ;;
+  esac
+done
 
 # Color output
 C_RED=$'\e[31m' C_GREEN=$'\e[32m' C_YELLOW=$'\e[33m' C_BOLD=$'\e[1m' C_RESET=$'\e[0m'
@@ -29,13 +38,17 @@ info() { printf '%s●%s %s\n' "$C_BOLD" "$C_RESET" "$*"; }
 info "DEVIL v1.0 - Emergency Verification & Intelligent Linux Recovery"
 info "Installing to: $PREFIX"
 
-# Prompt for installation
-if [[ -e "$PREFIX" ]]; then
-  printf '%sInstallation exists at %s. Replace? [y/N]%s ' "$C_YELLOW" "$PREFIX" "$C_RESET"
-  read -r reply || reply=""
+# Prompt for installation (skip if --yes)
+if [[ "$NON_INTERACTIVE" == true ]]; then
+  reply="y"
 else
-  printf 'Install DEVIL to %s? [y/N] ' "$PREFIX"
-  read -r reply || reply=""
+  if [[ -e "$PREFIX" ]]; then
+    printf '%sInstallation exists at %s. Replace? [y/N]%s ' "$C_YELLOW" "$PREFIX" "$C_RESET"
+    read -r reply || reply=""
+  else
+    printf 'Install DEVIL to %s? [y/N] ' "$PREFIX"
+    read -r reply || reply=""
+  fi
 fi
 [[ "$reply" =~ ^([Yy]|[Yy][Ee][Ss])$ ]] || { echo 'Installation cancelled.'; exit 0; }
 
@@ -46,7 +59,7 @@ cleanup() { rm -rf -- "$stage" 2>/dev/null || true; }
 trap cleanup EXIT
 
 info "Staging files..."
-for item in devil run.sh README.md LICENSE CHANGELOG.md CONTRIBUTING.md assets config core modules themes ui docs tests scripts; do
+for item in devil Devil_Recovery run.sh README.md LICENSE CHANGELOG.md CONTRIBUTING.md assets config core modules themes ui docs tests scripts; do
   [[ -e "$SOURCE/$item" ]] && cp -a -- "$SOURCE/$item" "$stage/" || true
 done
 
@@ -68,9 +81,18 @@ fi
 mv -- "$stage" "$PREFIX"
 trap - EXIT
 
-# Create launcher
+# Create launchers
 success "Installing system launcher"
 ln -sfn -- "$PREFIX/run.sh" "$LAUNCHER"
+
+# Install Devil_Recovery smart launcher
+if [[ -f "$PREFIX/Devil_Recovery" ]]; then
+  install -m755 -- "$PREFIX/Devil_Recovery" "$LAUNCHER_ALT"
+  success "Installing Devil_Recovery command"
+else
+  ln -sfn -- "$PREFIX/run.sh" "$LAUNCHER_ALT"
+  success "Installing Devil_Recovery command (symlink)"
+fi
 
 # Install desktop resources
 if [[ -f "$PREFIX/assets/devil.png" ]]; then
@@ -199,14 +221,16 @@ cat << 'MESSAGE'
 Installation Details:
   • Installed to:    /opt/devil
   • System launcher: devil (in /usr/local/bin)
+  • Smart launcher:  Devil_Recovery (in /usr/local/bin)
   • Desktop entry:   Available in application menu
   • Man page:        man devil
 
 Quick Start:
-  • Run dashboard:     devil
+  • Run dashboard:     devil  (or Devil_Recovery)
   • Diagnostics:       devil --diagnose
   • Generate reports:  devil --report
   • Simulate repairs:  devil --test
+  • Update:            Devil_Recovery --update
   • Full help:         devil --help
 
 State Directories:

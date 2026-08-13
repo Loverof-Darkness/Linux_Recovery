@@ -7,6 +7,7 @@ IFS=$' \t\n'
 
 readonly PREFIX=/opt/devil
 readonly LAUNCHER=/usr/local/bin/devil
+readonly LAUNCHER_ALT=/usr/local/bin/Devil_Recovery
 readonly DESKTOP_FILE=/usr/share/applications/devil.desktop
 readonly ICON_FILE=/usr/share/pixmaps/devil.png
 readonly MAN_FILE=/usr/share/man/man1/devil.1.gz
@@ -47,6 +48,7 @@ This script will remove DEVIL system files while PRESERVING:
 These files will be removed:
   • /opt/devil/
   • /usr/local/bin/devil
+  • /usr/local/bin/Devil_Recovery
   • /usr/share/applications/devil.desktop
   • /usr/share/pixmaps/devil.png
   • /usr/share/man/man1/devil.1.gz
@@ -67,6 +69,7 @@ read -r reply || reply=""
 info "Removing DEVIL installation..."
 
 rm -f -- "$LAUNCHER" && success "Removed launcher: $LAUNCHER"
+rm -f -- "$LAUNCHER_ALT" && success "Removed launcher: $LAUNCHER_ALT" || true
 rm -f -- "$DESKTOP_FILE" && success "Removed desktop entry" || true
 rm -f -- "$ICON_FILE" && success "Removed icon" || true
 rm -f -- "$MAN_FILE" && success "Removed man page" || true
