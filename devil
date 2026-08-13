@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# DEVIL — Devil Emergency Verification & Intelligent Linux Recovery
+set -Eeuo pipefail
+IFS=$' \t\n'
+
+readonly DEVIL_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=core/bootstrap.sh
+source "$DEVIL_ROOT/core/bootstrap.sh"
+devil_main "$@"

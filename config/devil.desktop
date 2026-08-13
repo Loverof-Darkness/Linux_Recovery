@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=DEVIL Recovery
+Comment=Devil Emergency Verification & Intelligent Linux Recovery
+Exec=devil
+Icon=devil
+Terminal=true
+Categories=System;Utility;
