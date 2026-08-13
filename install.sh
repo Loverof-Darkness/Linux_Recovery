@@ -65,8 +65,9 @@ done
 
 # Set permissions
 chown -R root:root -- "$stage" 2>/dev/null || true
-find "$stage" -type f \( -name '*.sh' -o -name devil \) -exec chmod 0755 {} + 2>/dev/null || true
-find "$stage" -type f ! \( -name '*.sh' -o -name devil \) -exec chmod 0644 {} + 2>/dev/null || true
+find "$stage" -type d -exec chmod 0755 {} + 2>/dev/null || true
+find "$stage" -type f \( -name '*.sh' -o -name 'devil' -o -name 'Devil_Recovery' \) -exec chmod 0755 {} + 2>/dev/null || true
+find "$stage" -type f ! \( -name '*.sh' -o -name 'devil' -o -name 'Devil_Recovery' \) -exec chmod 0644 {} + 2>/dev/null || true
 
 # Record installation metadata
 printf 'DEVIL=%s\nINSTALLED_AT=%s\n' '1.0.0' "$(date -Is)" >"$stage/.devil-install"

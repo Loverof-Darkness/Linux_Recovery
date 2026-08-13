@@ -104,12 +104,6 @@ _do_install() {
     # Run install.sh with --yes for non-interactive install
     bash "$clone_src/install.sh" --yes
 
-    # Ensure Devil_Recovery command exists alongside devil
-    if [[ ! -L /usr/local/bin/Devil_Recovery ]]; then
-        ln -sfn "$INSTALL_PREFIX/run.sh" /usr/local/bin/Devil_Recovery
-        success "Created command: Devil_Recovery"
-    fi
-
     # Cleanup clone directory
     rm -rf "$CLONE_DIR" 2>/dev/null || true
     success "Installation complete!"
