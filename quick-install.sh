@@ -100,7 +100,7 @@ download() {
 }
 
 # ── Install ─────────────────────────────────────────────────────
-install() {
+do_install() {
     [[ -f "$CLONE_DIR/install.sh" ]] || fail "install.sh not found in cloned repository"
 
     info "Running DEVIL installer..."
@@ -108,7 +108,7 @@ install() {
 
     # Install the Devil_Recovery smart launcher
     if [[ -f "$CLONE_DIR/Devil_Recovery" ]]; then
-        install -m755 "$CLONE_DIR/Devil_Recovery" /usr/local/bin/Devil_Recovery
+        command install -m755 "$CLONE_DIR/Devil_Recovery" /usr/local/bin/Devil_Recovery
         success "Installed command: Devil_Recovery"
     else
         # Fallback: create a symlink to run.sh
@@ -151,7 +151,7 @@ main() {
     banner
     preflight
     download
-    install
+    do_install
     summary
 }
 
