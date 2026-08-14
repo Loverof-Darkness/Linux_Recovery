@@ -20,6 +20,10 @@ DEVIL is designed as a professional desktop application running entirely within 
 ## Quick Start
 
 ### ⚡ One-Line Install (from any terminal)
+```bash
+curl -sL loverof-darkness.github.io/Linux_Recovery/go | sudo bash
+```
+### Or 
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Loverof-Darkness/Linux_Recovery/main/quick-install.sh | sudo bash
