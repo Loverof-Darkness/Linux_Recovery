@@ -12,6 +12,8 @@ readonly ICON_FILE=/usr/share/pixmaps/devil.png
 readonly LAUNCHER=/usr/local/bin/devil
 readonly LAUNCHER_ALT=/usr/local/bin/Devil_Recovery
 readonly MAN_FILE=/usr/share/man/man1/devil.1.gz
+readonly BOOTSTRAP_FILE=/etc/profile.d/devil-recovery-bootstrap.sh
+readonly FISH_BOOTSTRAP=/etc/fish/conf.d/devil-recovery-bootstrap.fish
 
 # Parse flags
 NON_INTERACTIVE=false
@@ -59,15 +61,15 @@ cleanup() { rm -rf -- "$stage" 2>/dev/null || true; }
 trap cleanup EXIT
 
 info "Staging files..."
-for item in devil Devil_Recovery run.sh README.md LICENSE CHANGELOG.md CONTRIBUTING.md assets config core modules themes ui docs tests scripts; do
+for item in devil devil_recovery Devil_Recovery run.sh README.md LICENSE CHANGELOG.md CONTRIBUTING.md assets config core modules themes ui docs tests scripts; do
   [[ -e "$SOURCE/$item" ]] && cp -a -- "$SOURCE/$item" "$stage/" || true
 done
 
 # Set permissions
 chown -R root:root -- "$stage" 2>/dev/null || true
 find "$stage" -type d -exec chmod 0755 {} + 2>/dev/null || true
-find "$stage" -type f \( -name '*.sh' -o -name 'devil' -o -name 'Devil_Recovery' \) -exec chmod 0755 {} + 2>/dev/null || true
-find "$stage" -type f ! \( -name '*.sh' -o -name 'devil' -o -name 'Devil_Recovery' \) -exec chmod 0644 {} + 2>/dev/null || true
+find "$stage" -type f \( -name '*.sh' -o -name 'devil' -o -name 'Devil_Recovery' -o -name 'devil_recovery' \) -exec chmod 0755 {} + 2>/dev/null || true
+find "$stage" -type f ! \( -name '*.sh' -o -name 'devil' -o -name 'Devil_Recovery' -o -name 'devil_recovery' \) -exec chmod 0644 {} + 2>/dev/null || true
 
 # Record installation metadata
 printf 'DEVIL=%s\nINSTALLED_AT=%s\n' '1.0.0' "$(date -Is)" >"$stage/.devil-install"
@@ -103,6 +105,12 @@ WRAPPER
   success "Installing Devil_Recovery command"
 fi
 
+# Install devil_recovery fetch-and-run launcher
+if [[ -f "$PREFIX/devil_recovery" ]]; then
+  install -m755 -- "$PREFIX/devil_recovery" /usr/local/bin/devil_recovery
+  success "Installing devil_recovery command"
+fi
+
 # Install desktop resources
 if [[ -f "$PREFIX/assets/devil.png" ]]; then
   success "Installing application icon"
@@ -112,6 +120,16 @@ fi
 if [[ -f "$PREFIX/config/devil.desktop" ]]; then
   success "Installing desktop entry"
   install -Dm644 -- "$PREFIX/config/devil.desktop" "$DESKTOP_FILE" 2>/dev/null || true
+fi
+
+# Install system-wide auto-bootstrap profiles
+if [[ -f "$PREFIX/config/devil-recovery-bootstrap.sh" ]]; then
+  install -Dm644 -- "$PREFIX/config/devil-recovery-bootstrap.sh" "$BOOTSTRAP_FILE" 2>/dev/null || true
+  success "Installing auto-bootstrap profile (bash/zsh)"
+fi
+if [[ -f "$PREFIX/config/devil-recovery-bootstrap.fish" ]] && [[ -d /etc/fish ]] ; then
+  install -Dm644 -- "$PREFIX/config/devil-recovery-bootstrap.fish" "$FISH_BOOTSTRAP" 2>/dev/null || true
+  success "Installing auto-bootstrap profile (fish)"
 fi
 
 # Create man page

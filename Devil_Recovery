@@ -14,10 +14,12 @@
 set -Eeuo pipefail
 IFS=$' \t\n'
 
-readonly REPO_URL="https://github.com/Loverof-Darkness/Linux_Recovery.git"
+readonly REPO="Loverof-Darkness/Linux_Recovery"
+readonly BRANCH="main"
+readonly TARBALL_URL="https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz"
 readonly INSTALL_PREFIX="/opt/devil"
 readonly DEVIL_BIN="$INSTALL_PREFIX/run.sh"
-readonly CLONE_DIR="/tmp/devil-recovery-install"
+readonly DL_DIR="/tmp/devil-recovery-install"
 
 # ── Colors ──────────────────────────────────────────────────────
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
@@ -50,20 +52,30 @@ EOF
     printf '%s' "$C_RESET"
 }
 
+# ── Download tool ──────────────────────────────────────────────
+fetch() {
+    local url="$1" out="$2"
+    if command -v curl &>/dev/null; then
+        curl -fsSL -o "$out" "$url"
+    elif command -v wget &>/dev/null; then
+        wget -qO "$out" "$url"
+    else
+        fail "Neither curl nor wget found. Install one and try again."
+    fi
+}
+
 # ── Dependency checks ──────────────────────────────────────────
 check_deps() {
-    local missing=()
-
-    if ! command -v git &>/dev/null; then
-        missing+=("git")
-    fi
-
     if [[ ${BASH_VERSINFO[0]} -lt 5 ]]; then
         fail "Bash 5 or newer is required (current: ${BASH_VERSION})"
     fi
 
-    if [[ ${#missing[@]} -gt 0 ]]; then
-        fail "Missing required dependencies: ${missing[*]}\nInstall them with your package manager and try again."
+    if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
+        fail "curl or wget is required. Install one and try again."
+    fi
+
+    if ! command -v tar &>/dev/null; then
+        fail "tar is required but not found."
     fi
 }
 
@@ -75,11 +87,17 @@ is_installed() {
 # ── Download from GitHub ───────────────────────────────────────
 download_devil() {
     info "Downloading DEVIL from GitHub..."
-    rm -rf "$CLONE_DIR" 2>/dev/null || true
+    rm -rf "$DL_DIR" 2>/dev/null || true
+    mkdir -p "$DL_DIR"
 
-    if ! git clone --depth 1 "$REPO_URL" "$CLONE_DIR" 2>&1; then
-        fail "Failed to clone repository. Check your internet connection."
+    local tarball="$DL_DIR/devil.tar.gz"
+    if ! fetch "$TARBALL_URL" "$tarball"; then
+        fail "Failed to download. Check your internet connection."
     fi
+
+    tar -xzf "$tarball" -C "$DL_DIR" || fail "Failed to extract archive"
+    # Rename extracted dir to a known name
+    mv "$DL_DIR/Linux_Recovery-$BRANCH" "$DL_DIR/source"
     success "Download complete"
 }
 
@@ -88,24 +106,24 @@ install_devil() {
     if [[ ${EUID:-999} -ne 0 ]]; then
         warn "Installation requires root privileges."
         info "Re-running with sudo..."
-        exec sudo bash "$0" "--install-from-clone" "$@"
+        exec sudo bash "$0" "--install-from-download" "$@"
     fi
 
     _do_install "$@"
 }
 
 _do_install() {
-    local clone_src="$CLONE_DIR"
-    [[ -d "$clone_src" ]] || fail "Clone directory not found at $clone_src"
-    [[ -f "$clone_src/install.sh" ]] || fail "install.sh not found in downloaded files"
+    local src="$DL_DIR/source"
+    [[ -d "$src" ]] || fail "Download directory not found at $src"
+    [[ -f "$src/install.sh" ]] || fail "install.sh not found in downloaded files"
 
     info "Installing DEVIL to $INSTALL_PREFIX..."
 
     # Run install.sh with --yes for non-interactive install
-    bash "$clone_src/install.sh" --yes
+    bash "$src/install.sh" --yes
 
-    # Cleanup clone directory
-    rm -rf "$CLONE_DIR" 2>/dev/null || true
+    # Cleanup download directory
+    rm -rf "$DL_DIR" 2>/dev/null || true
     success "Installation complete!"
 }
 
@@ -166,7 +184,7 @@ main() {
         --uninstall)
             uninstall_devil
             ;;
-        --install-from-clone)
+        --install-from-download)
             # Internal flag: called by sudo re-exec during auto-install
             shift
             _do_install "$@"

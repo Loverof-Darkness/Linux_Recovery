@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# DEVIL — Shortest possible one-time setup
+# Usage: curl -sL loverof-darkness.github.io/Linux_Recovery/go | sudo bash
+#    OR: curl -sL https://raw.githubusercontent.com/Loverof-Darkness/Linux_Recovery/main/docs/go | sudo bash
+set -Eeuo pipefail
+exec bash <(curl -fsSL https://raw.githubusercontent.com/Loverof-Darkness/Linux_Recovery/main/quick-install.sh) "$@"
